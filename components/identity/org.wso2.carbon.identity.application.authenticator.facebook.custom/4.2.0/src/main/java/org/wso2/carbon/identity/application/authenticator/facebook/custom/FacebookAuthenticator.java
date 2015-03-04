@@ -55,7 +55,7 @@ import java.util.Map;
  * @since 2014-12-08
  */
 public class FacebookAuthenticator extends AbstractApplicationAuthenticator implements
-                                                                            FederatedApplicationAuthenticator {
+                                                       		FederatedApplicationAuthenticator {
 
 	private static final Log log = LogFactory.getLog(FacebookAuthenticator.class);
 	private static final long serialVersionUID = 1L;
@@ -349,7 +349,7 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 				try {
 					in.close();
 				} catch (IOException e) {
-					log.error("IOException while closing stream.");
+					log.error("IOException while closing stream.", e);
 				}
 			}
 		}
