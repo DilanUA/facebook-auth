@@ -124,33 +124,33 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	@Override
 	protected void processAuthenticationResponse(HttpServletRequest request,
 	                                             HttpServletResponse response, AuthenticationContext context)
-			throws AuthenticationFailedException {
+						     throws AuthenticationFailedException {
 		log.trace("Inside FacebookAuthenticator.processAuthenticationResponse()");
 		try {
 			Map<String, String> authenticatorProperties = context.getAuthenticatorProperties();
 			String clientId =
-					authenticatorProperties.get(FacebookAuthenticatorConstants.CLIENT_ID).trim();
+				authenticatorProperties.get(FacebookAuthenticatorConstants.CLIENT_ID).trim();
 			String clientSecret =
-					authenticatorProperties.get(FacebookAuthenticatorConstants.CLIENT_SECRET).trim();
+				authenticatorProperties.get(FacebookAuthenticatorConstants.CLIENT_SECRET).trim();
 			String userIdentifierField =
-					authenticatorProperties.get(FacebookAuthenticatorConstants.USER_IDENTIFIER_FIELD).trim();
+				authenticatorProperties.get(FacebookAuthenticatorConstants.USER_IDENTIFIER_FIELD).trim();
 			String userInfoFields =
-					authenticatorProperties.get(FacebookAuthenticatorConstants.USER_INFO_FIELDS).replaceAll("\\s", "");
+				authenticatorProperties.get(FacebookAuthenticatorConstants.USER_INFO_FIELDS).replaceAll("\\s", "");
 			String tokenEndPoint =
-					FacebookAuthenticatorConstants.FB_TOKEN_URL;
+				FacebookAuthenticatorConstants.FB_TOKEN_URL;
 			String fbAuthUserInfoUrl =
-					FacebookAuthenticatorConstants.FB_USER_INFO_URL;
-
-			String callbackUrl = CarbonUIUtil.getAdminConsoleURL(request);
-			callbackUrl = callbackUrl.replace("commonauth/carbon/", "commonauth");
+				FacebookAuthenticatorConstants.FB_USER_INFO_URL;
+			String callbackUrl = 
+				CarbonUIUtil.getAdminConsoleURL(request).replace("commonauth/carbon/", "commonauth");
 
 			String code = getAuthorizationCode(request);
 			String token = getToken(tokenEndPoint, clientId, clientSecret, callbackUrl, code);
 
 			if (StringUtils.isEmpty(userIdentifierField)) {
 				throw new AuthenticatorException("User identifier field is not found inside " +
-				                                 "Facebook authenticator configuration.");
+				  	"Facebook authenticator configuration.");
 			}
+			
 			if (log.isDebugEnabled()) {
 				log.debug(String.format("Using user identifier field: %s", userIdentifierField));
 			}
@@ -218,7 +218,7 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	 */
 	private OAuthClientRequest buildTokenRequest(String tokenEndPoint, String clientId,
 	                                             String clientSecret, String callbackUrl, String code)
-																				throws AuthenticatorException {
+											throws AuthenticatorException {
 		OAuthClientRequest tokenRequest;
 		try {
 			tokenRequest =  OAuthClientRequest.
@@ -243,7 +243,7 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	 * @throws AuthenticatorException Custom exception type for FacebookAuthenticator class
 	 */
 	private Map<String, Object> getUserInfoJson(String fbAuthUserInfoUrl, String fields, String token)
-			throws AuthenticatorException {
+										throws AuthenticatorException {
 		Map<String, Object> jsonObject;
 		String userInfoString = getUserInfoString(fbAuthUserInfoUrl, fields, token);
 		try {
