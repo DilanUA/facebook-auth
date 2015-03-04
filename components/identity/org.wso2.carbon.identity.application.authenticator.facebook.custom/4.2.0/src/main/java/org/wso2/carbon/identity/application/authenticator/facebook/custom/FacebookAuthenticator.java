@@ -96,15 +96,13 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 
 			String state = context.getContextIdentifier() + "," + FacebookAuthenticatorConstants.LOGIN_TYPE;
 
-			OAuthClientRequest authRequest = OAuthClientRequest.
-					                                                   authorizationLocation(authorizationEP).
-					                                                   setClientId(clientId).
-					                                                   setRedirectURI(callbackUrl).
-					                                                   setResponseType(
-							                                                   FacebookAuthenticatorConstants.OAUTH2_GRANT_TYPE_CODE)
-			                                                   .
-					                                                   setScope(scope).setState(state).
-					                                                   buildQueryMessage();
+			OAuthClientRequest authRequest =    OAuthClientRequest.
+					                            authorizationLocation(authorizationEP).
+					                            setClientId(clientId).
+					                            setRedirectURI(callbackUrl).
+					                            setResponseType(FacebookAuthenticatorConstants.OAUTH2_GRANT_TYPE_CODE).
+					                            setScope(scope).setState(state).
+					                            buildQueryMessage();
 			response.sendRedirect(authRequest.getLocationUri());
 		} catch (IOException e) {
 			log.error("Exception while sending to the login page.", e);
@@ -220,15 +218,15 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	 */
 	private OAuthClientRequest buildTokenRequest(String tokenEndPoint, String clientId,
 	                                             String clientSecret, String callbackUrl, String code)
-			throws AuthenticatorException {
+																				throws AuthenticatorException {
 		OAuthClientRequest tokenRequest;
 		try {
-			tokenRequest = OAuthClientRequest.
-					                                 tokenLocation(tokenEndPoint).
-					                                 setClientId(clientId).
-					                                 setClientSecret(clientSecret).
-					                                 setRedirectURI(callbackUrl).
-					                                 setCode(code).buildQueryMessage();
+			tokenRequest =  OAuthClientRequest.
+					        tokenLocation(tokenEndPoint).
+					        setClientId(clientId).
+					        setClientSecret(clientSecret).
+					        setRedirectURI(callbackUrl).
+					        setCode(code).buildQueryMessage();
 		} catch (OAuthSystemException e) {
 			throw new AuthenticatorException("Exception while building access token request.", e);
 		}
@@ -310,15 +308,11 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 			for (Map.Entry<String, Object> entry : jsonObject.entrySet()) {
 				claims.put(ClaimMapping.build(entry.getKey(), entry.getKey(), null, false),
 				           entry.getValue().toString());
-				log.info("Adding claim mapping: " +
-				         entry.getKey() + " <> " +
-				         entry.getKey() + " : " +
-				         entry.getValue());
+				log.info("Adding claim mapping: " + entry.getKey() + " <> " +
+				         entry.getKey() + " : " + entry.getValue());
 				if (log.isDebugEnabled()) {
-					log.debug("Adding claim mapping: " +
-					          entry.getKey() + " <> " +
-					          entry.getKey() + " : " +
-					          entry.getValue());
+					log.debug("Adding claim mapping: " + entry.getKey() + " <> " +
+					          entry.getKey() + " : " + entry.getValue());
 				}
 			}
 			context.setSubjectAttributes(claims);
@@ -339,17 +333,25 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	 */
 	private String sendRequest(String url) throws AuthenticatorException {
 		StringBuilder responseData = new StringBuilder();
+		BufferedReader in = null;
 		try {
 			URLConnection urlConnection = new URL(url).openConnection();
-			BufferedReader in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+			in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
 			String inputLine = in.readLine();
 			while (inputLine != null) {
 				responseData.append(inputLine).append("\n");
 				inputLine = in.readLine();
 			}
-			in.close();
 		} catch (IOException e) {
 			throw new AuthenticatorException("IOException while sending user information request.", e);
+		} finally {
+			if (in != null) {
+				try {
+					in.close();
+				} catch (IOException e) {
+					log.error("IOException while closing stream.");
+				}
+			}
 		}
 		return responseData.toString();
 	}
