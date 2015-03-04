@@ -96,13 +96,13 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 
 			String state = context.getContextIdentifier() + "," + FacebookAuthenticatorConstants.LOGIN_TYPE;
 
-			OAuthClientRequest authRequest =    OAuthClientRequest.
-					                            authorizationLocation(authorizationEP).
-					                            setClientId(clientId).
-					                            setRedirectURI(callbackUrl).
-					                            setResponseType(FacebookAuthenticatorConstants.OAUTH2_GRANT_TYPE_CODE).
-					                            setScope(scope).setState(state).
-					                            buildQueryMessage();
+			OAuthClientRequest authRequest = OAuthClientRequest.
+					                 authorizationLocation(authorizationEP).
+					                 setClientId(clientId).
+					                 setRedirectURI(callbackUrl).
+					                 setResponseType(FacebookAuthenticatorConstants.OAUTH2_GRANT_TYPE_CODE).
+					                 setScope(scope).setState(state).
+					                 buildQueryMessage();
 			response.sendRedirect(authRequest.getLocationUri());
 		} catch (IOException e) {
 			log.error("Exception while sending to the login page.", e);
