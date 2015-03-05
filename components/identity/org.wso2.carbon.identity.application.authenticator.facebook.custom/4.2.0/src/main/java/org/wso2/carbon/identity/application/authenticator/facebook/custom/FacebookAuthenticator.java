@@ -218,15 +218,15 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	 */
 	private OAuthClientRequest buildTokenRequest(String tokenEndPoint, String clientId,
 	                                             String clientSecret, String callbackUrl, String code)
-											throws AuthenticatorException {
+										throws AuthenticatorException {
 		OAuthClientRequest tokenRequest;
 		try {
-			tokenRequest =  OAuthClientRequest.
-					        tokenLocation(tokenEndPoint).
-					        setClientId(clientId).
-					        setClientSecret(clientSecret).
-					        setRedirectURI(callbackUrl).
-					        setCode(code).buildQueryMessage();
+			tokenRequest = OAuthClientRequest.
+				       tokenLocation(tokenEndPoint).
+				       setClientId(clientId).
+				       setClientSecret(clientSecret).
+				       setRedirectURI(callbackUrl).
+				       setCode(code).buildQueryMessage();
 		} catch (OAuthSystemException e) {
 			throw new AuthenticatorException("Exception while building access token request.", e);
 		}
