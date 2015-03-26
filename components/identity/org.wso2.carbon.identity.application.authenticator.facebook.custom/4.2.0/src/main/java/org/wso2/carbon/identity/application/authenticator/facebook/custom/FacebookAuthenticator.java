@@ -68,7 +68,9 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	 */
 	@Override
 	public boolean canHandle(HttpServletRequest request) {
-		log.trace("Inside FacebookAuthenticator.canHandle()");
+		if (log.isDebugEnabled()) {
+			log.debug("Inside FacebookAuthenticator.canHandle()");
+		}
 		return (request.getParameter(FacebookAuthenticatorConstants.OAUTH2_GRANT_TYPE_CODE) != null &&
 		        request.getParameter(FacebookAuthenticatorConstants.OAUTH2_PARAM_STATE) != null &&
 		        FacebookAuthenticatorConstants.LOGIN_TYPE.equals(getLoginType(request)));
@@ -105,11 +107,13 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 					                 buildQueryMessage();
 			response.sendRedirect(authRequest.getLocationUri());
 		} catch (IOException e) {
-			log.error("Exception while sending to the login page.", e);
-			throw new AuthenticationFailedException(e.getMessage(), e);
+			String errorMsg = "Exception while sending to the login page.";
+			log.error(errorMsg, e);
+			throw new AuthenticationFailedException(errorMsg, e);
 		} catch (OAuthSystemException e) {
-			log.error("Exception while building authorization code request.", e);
-			throw new AuthenticationFailedException(e.getMessage(), e);
+			String errorMsg = "Exception while building authorization code request.";
+			log.error(errorMsg, e);
+			throw new AuthenticationFailedException(errorMsg, e);
 		}
 	}
 
@@ -125,7 +129,9 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	protected void processAuthenticationResponse(HttpServletRequest request,
 	                                             HttpServletResponse response, AuthenticationContext context)
 						     throws AuthenticationFailedException {
-		log.trace("Inside FacebookAuthenticator.processAuthenticationResponse()");
+		if (log.isDebugEnabled()) {
+			log.debug("Inside FacebookAuthenticator.processAuthenticationResponse()");
+		}
 		try {
 			Map<String, String> authenticatorProperties = context.getAuthenticatorProperties();
 			String clientId =
@@ -147,7 +153,7 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 			String token = getToken(tokenEndPoint, clientId, clientSecret, callbackUrl, code);
 
 			if (StringUtils.isEmpty(userIdentifierField)) {
-				throw new AuthenticatorException("User identifier field is not found inside " +
+				throw new RuntimeException("User identifier field is not found inside " +
 				  	"Facebook authenticator configuration.");
 			}
 			
@@ -158,9 +164,14 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 			Map<String, Object> userInfoJson = getUserInfoJson(fbAuthUserInfoUrl, userInfoFields, token);
 			setSubject(context, userInfoJson, userIdentifierField);
 			buildClaims(context, userInfoJson);
+		} catch (RuntimeException e) {
+			String errorMsg = "Failed to process Authentication Response as User Identifier Field is empty.";
+			log.error(errorMsg, e);
+			throw new AuthenticationFailedException(errorMsg, e);
 		} catch (AuthenticatorException e) {
-			log.error("Failed to process Facebook Connect response.", e);
-			throw new AuthenticationFailedException(e.getMessage(), e);
+			String errorMsg = "Failed to process Authentication Response.";
+			log.error(errorMsg, e);
+			throw new AuthenticationFailedException(errorMsg, e);
 		}
 	}
 
@@ -283,13 +294,18 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	 * @param context             Authentication context data including the relying party and etc
 	 * @param userInfoJson        Requested user information in the form of a JSON
 	 * @param userIdentifierField User identifier field as specified in the UI
-	 * @throws AuthenticatorException Custom exception type for FacebookAuthenticator class
+	 *
 	 */
 	private void setSubject(AuthenticationContext context, Map<String, Object> userInfoJson,
 	                        String userIdentifierField) throws AuthenticatorException {
 		String authenticatedUserId = (String) userInfoJson.get(userIdentifierField);
-		if (StringUtils.isEmpty(authenticatedUserId)) {
-			throw new AuthenticatorException("Authenticated user identifier is empty.");
+		try {
+			if (StringUtils.isEmpty(authenticatedUserId)) {
+				throw new RuntimeException("Authenticated user identifier is empty.");
+			}
+		} catch (RuntimeException e) {
+			String errorMsg = "Failed to process Authentication Response.";
+			throw new AuthenticatorException(errorMsg, e);
 		}
 		context.setSubject(authenticatedUserId);
 	}
@@ -364,7 +380,9 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	 */
 	@Override
 	public String getContextIdentifier(HttpServletRequest request) {
-		log.trace("Inside FacebookAuthenticator.getContextIdentifier()");
+		if (log.isDebugEnabled()) {
+			log.debug("Inside FacebookAuthenticator.getContextIdentifier()");
+		}
 		String state = request.getParameter(FacebookAuthenticatorConstants.OAUTH2_PARAM_STATE);
 		if (state != null) {
 			return state.split(",")[0];
