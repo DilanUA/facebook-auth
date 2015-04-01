@@ -131,12 +131,12 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 			String state = context.getContextIdentifier() + "," + FacebookAuthenticatorConstants.LOGIN_TYPE;
 
 			OAuthClientRequest authRequest = OAuthClientRequest.
-					                         authorizationLocation(authorizationEP).
-					                         setClientId(clientId).
-					                         setRedirectURI(callbackUrl).
-					                         setResponseType(FacebookAuthenticatorConstants.OAUTH2_GRANT_TYPE_CODE).
-					                         setScope(scope).setState(state).
-					                         buildQueryMessage();
+					                 authorizationLocation(authorizationEP).
+					                 setClientId(clientId).
+					                 setRedirectURI(callbackUrl).
+					                 setResponseType(FacebookAuthenticatorConstants.OAUTH2_GRANT_TYPE_CODE).
+					                 setScope(scope).setState(state).
+					                 buildQueryMessage();
 			response.sendRedirect(authRequest.getLocationUri());
 		} catch (AuthenticatorException e) {
 			String errorMsg = "Invalid Configuration at Facebook Authentication Wizard.";
