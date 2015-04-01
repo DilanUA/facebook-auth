@@ -60,11 +60,44 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	private static final Log log = LogFactory.getLog(FacebookAuthenticator.class);
 	private static final long serialVersionUID = 1L;
 
+	// Variables to store User Input for Authenticator properties are as follows.
+	private String clientId;
+	private String clientSecret;
+	private String userIdentifierField;
+	private String userInfoFields;
+
+	/**
+	 * Retrieve Authentication Configuration Information from IDP level.
+	 *
+	 * @param context Authentication context data including the relying party and etc
+	 * @throws AuthenticatorException
+	 */
+	private void retrieveAuthenticationConfiguration(AuthenticationContext context) throws AuthenticatorException {
+		Map<String, String> authenticatorProperties = context.getAuthenticatorProperties();
+		clientId = authenticatorProperties.get(FacebookAuthenticatorConstants.CLIENT_ID);
+		if (StringUtils.isEmpty(clientId)) {
+			throw new AuthenticatorException("Client ID is empty inside Facebook authenticator configuration");
+		}
+		clientSecret = authenticatorProperties.get(FacebookAuthenticatorConstants.CLIENT_SECRET);
+		if (StringUtils.isEmpty(clientSecret)) {
+			throw new AuthenticatorException("Client Secret is empty inside Facebook authenticator configuration");
+		}
+		userIdentifierField = authenticatorProperties.get(FacebookAuthenticatorConstants.USER_IDENTIFIER_FIELD);
+		if (StringUtils.isEmpty(userIdentifierField)) {
+			throw new AuthenticatorException("User Identifier is empty inside Facebook authenticator configuration");
+		}
+		userInfoFields = authenticatorProperties.get(FacebookAuthenticatorConstants.USER_INFO_FIELDS);
+		if (!StringUtils.isEmpty(userInfoFields)) {
+			// to remove any unwanted spaces in between comma-separated field names.
+			userInfoFields = userInfoFields.replaceAll("\\s", "");
+		}
+	}
+
 	/**
 	 * Returns true or false based on the status of handling an authentication request to Facebook.
 	 *
 	 * @param request Request as a HttpServletRequest type object
-	 * @return A boolean
+	 * @return A boolean Returns true if request can be handled, otherwise false
 	 */
 	@Override
 	public boolean canHandle(HttpServletRequest request) {
@@ -82,14 +115,13 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	 * @param request  Request to be set as a HttpServletRequest type object
 	 * @param response Response to be set as a HttpServletRequest type object
 	 * @param context  Authentication context data including the relying party and etc
-	 * @throws AuthenticationFailedException Custom exception type for FacebookAuthenticator class
+	 * @throws AuthenticationFailedException Custom exception type defined at authentication framework level
 	 */
 	@Override
 	protected void initiateAuthenticationRequest(HttpServletRequest request, HttpServletResponse response,
 	                                             AuthenticationContext context) throws AuthenticationFailedException {
 		try {
-			Map<String, String> authenticatorProperties = context.getAuthenticatorProperties();
-			String clientId = authenticatorProperties.get(FacebookAuthenticatorConstants.CLIENT_ID);
+			retrieveAuthenticationConfiguration(context);
 			String authorizationEP = FacebookAuthenticatorConstants.FB_AUTH_URL;
 			String scope = FacebookAuthenticatorConstants.SCOPE;
 
@@ -99,13 +131,17 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 			String state = context.getContextIdentifier() + "," + FacebookAuthenticatorConstants.LOGIN_TYPE;
 
 			OAuthClientRequest authRequest = OAuthClientRequest.
-					                 authorizationLocation(authorizationEP).
-					                 setClientId(clientId).
-					                 setRedirectURI(callbackUrl).
-					                 setResponseType(FacebookAuthenticatorConstants.OAUTH2_GRANT_TYPE_CODE).
-					                 setScope(scope).setState(state).
-					                 buildQueryMessage();
+					                         authorizationLocation(authorizationEP).
+					                         setClientId(clientId).
+					                         setRedirectURI(callbackUrl).
+					                         setResponseType(FacebookAuthenticatorConstants.OAUTH2_GRANT_TYPE_CODE).
+					                         setScope(scope).setState(state).
+					                         buildQueryMessage();
 			response.sendRedirect(authRequest.getLocationUri());
+		} catch (AuthenticatorException e) {
+			String errorMsg = "Invalid Configuration at Facebook Authentication Wizard.";
+			log.error(errorMsg, e);
+			throw new AuthenticationFailedException(errorMsg, e);
 		} catch (IOException e) {
 			String errorMsg = "Exception while sending to the login page.";
 			log.error(errorMsg, e);
@@ -123,7 +159,7 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	 * @param request  Request made as a HttpServletRequest type object
 	 * @param response Response as a HttpServletRequest type object
 	 * @param context  Authentication context data including the relying party and etc
-	 * @throws AuthenticationFailedException Custom exception type for FacebookAuthenticator class
+	 * @throws AuthenticationFailedException Custom exception type defined at authentication framework level
 	 */
 	@Override
 	protected void processAuthenticationResponse(HttpServletRequest request,
@@ -133,16 +169,7 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 			log.debug("Inside FacebookAuthenticator.processAuthenticationResponse()");
 		}
 		try {
-			Map<String, String> authenticatorProperties = context.getAuthenticatorProperties();
-			String clientId =
-				authenticatorProperties.get(FacebookAuthenticatorConstants.CLIENT_ID).trim();
-			String clientSecret =
-				authenticatorProperties.get(FacebookAuthenticatorConstants.CLIENT_SECRET).trim();
-			String userIdentifierField =
-				authenticatorProperties.get(FacebookAuthenticatorConstants.USER_IDENTIFIER_FIELD).trim();
-			String userInfoFields =
-				authenticatorProperties.get(FacebookAuthenticatorConstants.USER_INFO_FIELDS).replaceAll("\\s", "");
-			String tokenEndPoint =
+			String tokenEndPointUrl =
 				FacebookAuthenticatorConstants.FB_TOKEN_URL;
 			String fbAuthUserInfoUrl =
 				FacebookAuthenticatorConstants.FB_USER_INFO_URL;
@@ -150,12 +177,7 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 				CarbonUIUtil.getAdminConsoleURL(request).replace("commonauth/carbon/", "commonauth");
 
 			String code = getAuthorizationCode(request);
-			String token = getToken(tokenEndPoint, clientId, clientSecret, callbackUrl, code);
-
-			if (StringUtils.isEmpty(userIdentifierField)) {
-				throw new RuntimeException("User identifier field is not found inside " +
-				  	"Facebook authenticator configuration.");
-			}
+			String token = getToken(tokenEndPointUrl, clientId, clientSecret, callbackUrl, code);
 			
 			if (log.isDebugEnabled()) {
 				log.debug(String.format("Using user identifier field: %s", userIdentifierField));
@@ -164,10 +186,6 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 			Map<String, Object> userInfoJson = getUserInfoJson(fbAuthUserInfoUrl, userInfoFields, token);
 			setSubject(context, userInfoJson, userIdentifierField);
 			buildClaims(context, userInfoJson);
-		} catch (RuntimeException e) {
-			String errorMsg = "Failed to process Authentication Response as User Identifier Field is empty.";
-			log.error(errorMsg, e);
-			throw new AuthenticationFailedException(errorMsg, e);
 		} catch (AuthenticatorException e) {
 			String errorMsg = "Failed to process Authentication Response.";
 			log.error(errorMsg, e);
@@ -201,7 +219,7 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	 * @param callbackUrl   Callback URL to return
 	 * @param code          Authorization code to obtain an access token from Facebook
 	 * @return A string object
-	 * @throws AuthenticatorException
+	 * @throws AuthenticatorException Custom exception type for FacebookAuthenticator class
 	 */
 	private String getToken(String tokenEndPoint, String clientId, String clientSecret,
 	                        String callbackUrl, String code) throws AuthenticatorException {
@@ -294,18 +312,12 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	 * @param context             Authentication context data including the relying party and etc
 	 * @param userInfoJson        Requested user information in the form of a JSON
 	 * @param userIdentifierField User identifier field as specified in the UI
-	 *
 	 */
 	private void setSubject(AuthenticationContext context, Map<String, Object> userInfoJson,
 	                        String userIdentifierField) throws AuthenticatorException {
 		String authenticatedUserId = (String) userInfoJson.get(userIdentifierField);
-		try {
-			if (StringUtils.isEmpty(authenticatedUserId)) {
-				throw new RuntimeException("Authenticated user identifier is empty.");
-			}
-		} catch (RuntimeException e) {
-			String errorMsg = "Failed to process Authentication Response.";
-			throw new AuthenticatorException(errorMsg, e);
+		if (StringUtils.isEmpty(authenticatedUserId)) {
+			throw new AuthenticatorException("Authenticated user identifier value is empty.");
 		}
 		context.setSubject(authenticatedUserId);
 	}
@@ -317,7 +329,7 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 	 * @param jsonObject Requested user information in the form of a JSON
 	 * @throws AuthenticatorException Custom exception type for FacebookAuthenticator class
 	 */
-	public void buildClaims(AuthenticationContext context,
+	private void buildClaims(AuthenticationContext context,
 	                        Map<String, Object> jsonObject) throws AuthenticatorException {
 		if (jsonObject != null) {
 			Map<ClaimMapping, String> claims = new HashMap<ClaimMapping, String>();
@@ -365,7 +377,7 @@ public class FacebookAuthenticator extends AbstractApplicationAuthenticator impl
 				try {
 					in.close();
 				} catch (IOException e) {
-					log.error("IOException while closing stream.", e);
+					log.error("IOException while closing input stream.", e);
 				}
 			}
 		}
